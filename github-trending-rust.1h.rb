@@ -18,7 +18,7 @@ LANG = 'rust'.freeze # your favorite language
 # LANG = 'java'.freeze
 
 url = 'https://github.com/trending/' + LANG + '?since=daily'
-BASE_URL = 'https://github.com/'.freeze
+BASE_URL = 'https://github.com'.freeze
 
 charset = nil
 html = open(url) do |f|
@@ -29,37 +29,49 @@ end
 hash = {}
 
 puts LANG.capitalize
-puts '---'
+# puts '---'
 
 doc = Nokogiri::HTML.parse(html, nil, charset)
-doc.xpath('//ol[@class="repo-list"]/li').each do |node|
-  node.xpath('.//h3/a').attribute('href').value.each_line do |s|
-    s.slice!(0)
-    hash = { name: s, url: BASE_URL + s, stars: '?' }
+doc.xpath('//article[@class="Box-row"]').each do |node|
+  repo = node.xpath('.//h1/a')
+  desc = node.xpath('.//p').text.strip()
+  if desc.length > 70 then
+    desc = desc[0,70] + '...'
+  end
+  hash = { 
+    name: repo.text.strip(),
+    url: BASE_URL + repo.attribute('href').value,
+    stars: node.xpath('.//span[contains(@class, "float-sm-right")]').text.scan(/\b[0-9]+\b/).first,
+    desc: desc,
+  }
 
-    # api = 'https://api.github.com/repos/' + s
-    # begin
-    #   res = open(api)
-    #   code, message = res.status
-    # rescue => _
-    #   puts '🙅Github Api Limits🙅'
-    #   exit
-    # end
+  # node.xpath('.//h3/a').attribute('href').value.each_line do |s|
+  #   s.slice!(0)
+  #   hash = { name: s, url: BASE_URL + s, stars: "?" }
 
-    # if code == '200'
-    #   result = JSON.parse(res.read)
-    # stars = "?"
-    if node.xpath('./div[4]/span[3]').text.split("\n").count == 4 then
-    	hash[:stars] = node.xpath('./div[4]/span[3]').text.split("\n")[2].split(' ')[0]
-    end
+  #   # api = 'https://api.github.com/repos/' + s
+  #   # begin
+  #   #   res = open(api)
+  #   #   code, message = res.status
+  #   # rescue => _
+  #   #   puts '🙅Github Api Limits🙅'
+  #   #   exit
+  #   # end
+
+  #   # if code == '200'
+  #   #   result = JSON.parse(res.read)
+    
+  #   if node.xpath('./div[4]/span[3]').text.split("\n").count == 4 then
+  #   	hash[:stars] = node.xpath('./div[4]/span[3]').text.split("\n")[2].split(' ')[0]
+  #   end
     #puts hash.fetch(:name)
     #puts node.xpath('./div[4]/span[3]').text.split("\n").count
-    # puts hash.fetch(:name) + ' ⭐️ Daily: ' + stars + '| sizes=14 href=' + hash.fetch(:url)
+    # puts hash.fetch(:name) + ' ⭐️ Daily: ' + hash.fetch(:stars) + '| sizes=14 href=' + hash.fetch(:url)
     # else
     #   puts "OMG!! #{code} #{message}"
     # end
-  end
-  hash[:desc] = node.xpath('./div[3]/p').text.strip[0,70]
+  # end
+  # hash[:desc] = node.xpath('./div[3]/p').text.strip[0,70]
   puts '---'
   puts hash.fetch(:name) + ' ⭐️ Daily: ' + hash.fetch(:stars) + '| sizes=14 href=' + hash.fetch(:url)
   puts hash.fetch(:desc)
